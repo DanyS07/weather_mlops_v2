@@ -78,5 +78,5 @@ stages:
       size: 37505833
     - path: version.json
       hash: md5
-      md5: 71ae413bddaf3f1f8918dc017cd5f97b
+      md5: 5f7b7795a37fcc359ffe803c8a1e9f1e
       size: 165
