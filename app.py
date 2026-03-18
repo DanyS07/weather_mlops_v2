@@ -4,6 +4,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import os
+import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 
@@ -12,9 +13,13 @@ st.set_page_config(layout="wide")
 # -----------------------------------
 def ensure_pipeline():
     if not os.path.exists("models/technopark_model.pkl"):
-        st.warning("⚙️ Running pipeline...")
+        st.warning("⚙️ Running ML pipeline...")
         os.system("pip install -r requirements.txt")
-        os.system("dvc repro")
+        exit_code = os.system("dvc repro")
+
+        if exit_code != 0:
+            st.error("Pipeline failed. Check logs.")
+            st.stop()
 
 ensure_pipeline()
 
@@ -27,12 +32,12 @@ else:
     version = {"version": "N/A", "trained_on": "N/A", "rmse_technopark": 0.0}
 
 # -----------------------------------
-# SIDEBAR (Quick stats placeholder)
+# Sidebar
 # -----------------------------------
 st.sidebar.title("📊 Quick Stats")
 
 # -----------------------------------
-# HEADER
+# Header
 # -----------------------------------
 st.title("🌦 Weather Forecast Dashboard")
 
@@ -44,7 +49,7 @@ col3.metric("RMSE", f"{version.get('rmse_technopark', 0):.2f} °C")
 st.markdown("---")
 
 # -----------------------------------
-# Prediction + actual data
+# Data function (FIXED SCALING)
 # -----------------------------------
 def get_data(region):
     try:
@@ -56,11 +61,17 @@ def get_data(region):
         latest = X[-1].reshape(1, -1)
         pred = model.predict(latest)[0]
 
-        
-        forecast = pred  # already in correct scale if trained properly
+        # ---- Forecast inverse scaling ----
+        dummy_pred = np.zeros((len(pred), scaler.n_features_in_))
+        dummy_pred[:, 0] = pred
+        forecast = scaler.inverse_transform(dummy_pred)[:, 0]
 
-        # recent actuals (last 48 hrs)
-        actual = X[-48:, 0]
+        # ---- Actual inverse scaling ----
+        temp_scaled = X[-48:, 0].reshape(-1, 1)
+
+        dummy_actual = np.zeros((len(temp_scaled), scaler.n_features_in_))
+        dummy_actual[:, 0] = temp_scaled.flatten()
+        actual = scaler.inverse_transform(dummy_actual)[:, 0]
 
         return forecast, actual
 
@@ -69,7 +80,7 @@ def get_data(region):
         return np.zeros(24), np.zeros(48)
 
 # -----------------------------------
-# DISPLAY FUNCTION
+# Display function
 # -----------------------------------
 def display(region, title):
 
@@ -77,17 +88,9 @@ def display(region, title):
 
     forecast, actual = get_data(region)
 
-    # Forecast DF
-    forecast_df = pd.DataFrame({
-        "Hour": list(range(1, 25)),
-        "Forecast": forecast
-    })
-
-    # Actual DF
-    actual_df = pd.DataFrame({
-        "Hour": list(range(-47, 1)),
-        "Actual": actual
-    })
+    # Time axis (NO NEGATIVE VALUES)
+    actual_hours = list(range(1, 49))
+    forecast_hours = list(range(49, 73))
 
     # Metrics
     c1, c2, c3 = st.columns(3)
@@ -101,20 +104,47 @@ def display(region, title):
     st.sidebar.write(f"Min: {forecast.min():.1f} °C")
     st.sidebar.write(f"Avg: {forecast.mean():.1f} °C")
 
-    # Combine for overlay chart
-    combined = pd.concat([
-        actual_df.set_index("Hour"),
-        forecast_df.set_index("Hour")
-    ], axis=1)
+    # -----------------------------------
+    # Plotly Chart (PROFESSIONAL)
+    # -----------------------------------
+    fig = go.Figure()
 
-    st.markdown("### 📈 Forecast vs Recent Actuals")
-    st.line_chart(combined)
+    # Actual (dark blue)
+    fig.add_trace(go.Scatter(
+        x=actual_hours,
+        y=actual,
+        mode='lines',
+        name='Actual (Last 48h)',
+        line=dict(color='royalblue', width=3)
+    ))
 
+    # Forecast (orange)
+    fig.add_trace(go.Scatter(
+        x=forecast_hours,
+        y=forecast,
+        mode='lines',
+        name='Forecast (Next 24h)',
+        line=dict(color='orange', width=3, dash='dash')
+    ))
+
+    fig.update_layout(
+        title="Forecast vs Recent Actuals",
+        xaxis_title="Time (Hours)",
+        yaxis_title="Temperature (°C)",
+        legend=dict(x=0, y=1),
+        template="plotly_white"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Data table
     with st.expander("📊 Detailed Data"):
-        st.dataframe(combined)
+        df_actual = pd.DataFrame({"Hour": actual_hours, "Actual": actual})
+        df_forecast = pd.DataFrame({"Hour": forecast_hours, "Forecast": forecast})
+        st.dataframe(pd.concat([df_actual, df_forecast]))
 
 # -----------------------------------
-# TABS
+# Tabs
 # -----------------------------------
 tab1, tab2 = st.tabs(["Technopark", "Thampanoor"])
 
@@ -125,7 +155,7 @@ with tab2:
     display("thampanoor", "Thampanoor - Next 24 Hour Forecast")
 
 # -----------------------------------
-# FOOTER
+# Footer
 # -----------------------------------
 st.markdown("---")
 st.caption("MLOps Weather Forecast | Random Forest | Streamlit + DVC")
