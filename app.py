@@ -92,11 +92,6 @@ def display(region, title):
     actual_hours = list(range(1, 49))
     forecast_hours = list(range(49, 73))
 
-    # Metrics
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Max Temp", f"{forecast.max():.1f} °C")
-    c2.metric("Min Temp", f"{forecast.min():.1f} °C")
-    c3.metric("Avg Temp", f"{forecast.mean():.1f} °C")
 
     # Sidebar update
     st.sidebar.markdown(f"### {region.title()}")
