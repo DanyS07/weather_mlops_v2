@@ -56,13 +56,11 @@ def get_data(region):
         latest = X[-1].reshape(1, -1)
         pred = model.predict(latest)[0]
 
-        # inverse scaling
-        dummy = np.zeros((len(pred), scaler.n_features_in_))
-        dummy[:, 0] = pred
-        forecast = scaler.inverse_transform(dummy)[:, 0]
+        
+        forecast = pred  # already in correct scale if trained properly
 
         # recent actuals (last 48 hrs)
-        actual = scaler.inverse_transform(X[-48:, :])[:, 0]
+        actual = X[-48:, 0]
 
         return forecast, actual
 
