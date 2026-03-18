@@ -66,7 +66,7 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: 18202b2abdc3bb6f2d8d520cb60a6889
+      md5: 73809e5d82739ab2eb3048107d53a6bd
       size: 90
     - path: models/technopark_model.pkl
       hash: md5
@@ -78,5 +78,5 @@ stages:
       size: 37505833
     - path: version.json
       hash: md5
-      md5: ec50d1e3ab621da39ae7e9152b9edfa1
+      md5: 278ad88bf7af76319d571d8533018455
       size: 165
