@@ -1,0 +1,82 @@
+schema: '2.0'
+stages:
+  collect:
+    cmd: python src/collect.py
+    deps:
+    - path: params.yaml
+      hash: md5
+      md5: 76fef28636cda67c8288a49c6f80d8a1
+      size: 210
+    - path: src/collect.py
+      hash: md5
+      md5: fa4def883a27d43564cb0d5a3f70fceb
+      size: 1069
+    outs:
+    - path: data/raw/
+      hash: md5
+      md5: 90d27a5cb3f00f6f4cd2f519d333b1e0.dir
+      size: 298035
+      nfiles: 2
+  preprocess:
+    cmd: python src/preprocess.py
+    deps:
+    - path: data/raw/
+      hash: md5
+      md5: 90d27a5cb3f00f6f4cd2f519d333b1e0.dir
+      size: 298035
+      nfiles: 2
+    - path: params.yaml
+      hash: md5
+      md5: 76fef28636cda67c8288a49c6f80d8a1
+      size: 210
+    - path: src/preprocess.py
+      hash: md5
+      md5: 9ea4eb76c226c9a28e9df647997e4afc
+      size: 1202
+    outs:
+    - path: data/processed/
+      hash: md5
+      md5: e97b95d38e86ce26abfa66d27807d59d.dir
+      size: 21326848
+      nfiles: 8
+    - path: models/scaler_technopark.pkl
+      hash: md5
+      md5: eb46c3f4a8e4a4aa4e8c82097a3bf133
+      size: 1207
+    - path: models/scaler_thampanoor.pkl
+      hash: md5
+      md5: 5d20317f67f798267cd552e24f59dd2b
+      size: 1207
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/processed/
+      hash: md5
+      md5: e97b95d38e86ce26abfa66d27807d59d.dir
+      size: 21326848
+      nfiles: 8
+    - path: params.yaml
+      hash: md5
+      md5: 76fef28636cda67c8288a49c6f80d8a1
+      size: 210
+    - path: src/train.py
+      hash: md5
+      md5: 58742ac5c2489f940341231f55bc1301
+      size: 1169
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: ddf8d27283ef7eb0d5a34c6aba20e963
+      size: 93
+    - path: models/technopark_model.pkl
+      hash: md5
+      md5: a9debf4b238c01482d8eb433c8b47f34
+      size: 39380233
+    - path: models/thampanoor_model.pkl
+      hash: md5
+      md5: 6ea050180794afee80a88a5a0c14a1e7
+      size: 37505801
+    - path: version.json
+      hash: md5
+      md5: 5306b946887081c2304362416c5bd644
+      size: 170

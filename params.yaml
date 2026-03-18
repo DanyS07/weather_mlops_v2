@@ -1,0 +1,15 @@
+locations:
+  technopark: [8.5574, 76.8800]
+  thampanoor: [8.4875, 76.9525]
+
+data:
+  days: 180
+
+features:
+  lookback: 48
+  horizon: 24
+
+model:
+  n_estimators: 100
+  max_depth: 10
+  random_state: 42
