@@ -126,10 +126,15 @@ def display(region, title):
         title="Forecast vs Recent Actuals",
         xaxis_title="Time (Hours)",
         yaxis_title="Temperature (°C)",
-        legend=dict(x=0, y=1),
-        template="plotly_white"
+        template="plotly_white",
+        legend=dict(
+                x=1,
+                y=1,
+                xanchor="right",
+                yanchor="top",
+                bgcolor="rgba(255,255,255,0.6)"
+            )
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
     # Data table
