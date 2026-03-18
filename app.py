@@ -4,24 +4,26 @@ import joblib
 import numpy as np
 import pandas as pd
 import os
+os.system("pip install requests")
 
 st.set_page_config(layout="wide")
 
 # -----------------------------------
-# Ensure pipeline runs if files missing
+# Ensure pipeline runs (robust version)
 # -----------------------------------
 def ensure_pipeline():
-    required_files = [
-        "version.json",
-        "models/technopark_model.pkl",
-        "models/thampanoor_model.pkl",
-        "data/processed/X_test_technopark.npy",
-        "data/processed/X_test_thampanoor.npy"
-    ]
+    if not os.path.exists("models/technopark_model.pkl"):
+        st.warning("⚙️ First-time setup: Running ML pipeline...")
 
-    if not all(os.path.exists(f) for f in required_files):
-        st.warning("Running pipeline to generate required files...")
-        os.system("dvc repro")
+        # Install dependencies (important for Streamlit Cloud)
+        os.system("pip install -r requirements.txt")
+
+        # Run pipeline
+        exit_code = os.system("dvc repro")
+
+        if exit_code != 0:
+            st.error("❌ Pipeline failed. Check logs in Streamlit.")
+            st.stop()
 
 
 ensure_pipeline()
@@ -73,7 +75,7 @@ def get_prediction(region):
         return real_values
 
     except Exception as e:
-        st.error(f"Error loading model for {region}: {e}")
+        st.error(f"❌ Error loading model for {region}: {e}")
         return np.zeros(24)
 
 
@@ -118,4 +120,4 @@ with tab2:
 # Footer
 # -----------------------------------
 st.markdown("---")
-st.caption("MLOps Pipeline powered weather forecasting | Random Forest Model")
+st.caption("MLOps Weather Forecast | Random Forest | Streamlit + DVC")
