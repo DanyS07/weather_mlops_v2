@@ -7,53 +7,82 @@ import os
 
 st.set_page_config(layout="wide")
 
-# -----------------------------
-# Ensure model exists
-# -----------------------------
-if not os.path.exists("models"):
-    os.system("dvc repro")
+# -----------------------------------
+# Ensure pipeline runs if files missing
+# -----------------------------------
+def ensure_pipeline():
+    required_files = [
+        "version.json",
+        "models/technopark_model.pkl",
+        "models/thampanoor_model.pkl",
+        "data/processed/X_test_technopark.npy",
+        "data/processed/X_test_thampanoor.npy"
+    ]
 
-# -----------------------------
-# Load metadata
-# -----------------------------
-version = json.load(open("version.json"))
+    if not all(os.path.exists(f) for f in required_files):
+        st.warning("Running pipeline to generate required files...")
+        os.system("dvc repro")
 
+
+ensure_pipeline()
+
+# -----------------------------------
+# Load version info safely
+# -----------------------------------
+if os.path.exists("version.json"):
+    version = json.load(open("version.json"))
+else:
+    version = {
+        "version": "N/A",
+        "trained_on": "N/A",
+        "rmse_technopark": 0.0,
+        "rmse_thampanoor": 0.0
+    }
+
+# -----------------------------------
+# UI HEADER
+# -----------------------------------
 st.title("🌦 Weather Forecast Dashboard")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Model Version", version["version"])
-col2.metric("Last Trained", version["trained_on"].split(".")[0])
-col3.metric("RMSE", f"{version['rmse_technopark']:.2f} °C")
+
+col1.metric("Model Version", version.get("version", "N/A"))
+col2.metric("Last Trained", str(version.get("trained_on", "N/A")).split(".")[0])
+col3.metric("RMSE (Technopark)", f"{version.get('rmse_technopark', 0):.2f} °C")
 
 st.markdown("---")
 
-# -----------------------------
-# Tabs
-# -----------------------------
-tab1, tab2 = st.tabs(["Technopark", "Thampanoor"])
-
-
-# -----------------------------
+# -----------------------------------
 # Prediction function
-# -----------------------------
+# -----------------------------------
 def get_prediction(region):
-    model = joblib.load(f"models/{region}_model.pkl")
-    scaler = joblib.load(f"models/scaler_{region}.pkl")
+    try:
+        model = joblib.load(f"models/{region}_model.pkl")
+        scaler = joblib.load(f"models/scaler_{region}.pkl")
 
-    X = np.load(f"data/processed/X_test_{region}.npy")
-    latest = X[-1].reshape(1, -1)
+        X = np.load(f"data/processed/X_test_{region}.npy")
+        latest = X[-1].reshape(1, -1)
 
-    pred = model.predict(latest)[0]
+        pred = model.predict(latest)[0]
 
-    # inverse scaling
-    dummy = np.zeros((len(pred), scaler.n_features_in_))
-    dummy[:, 0] = pred
-    real_values = scaler.inverse_transform(dummy)[:, 0]
+        # Inverse scaling
+        dummy = np.zeros((len(pred), scaler.n_features_in_))
+        dummy[:, 0] = pred
+        real_values = scaler.inverse_transform(dummy)[:, 0]
 
-    return real_values
+        return real_values
+
+    except Exception as e:
+        st.error(f"Error loading model for {region}: {e}")
+        return np.zeros(24)
 
 
-def display(region):
+# -----------------------------------
+# Display function
+# -----------------------------------
+def display(region, title):
+    st.subheader(title)
+
     pred = get_prediction(region)
 
     df = pd.DataFrame({
@@ -67,20 +96,26 @@ def display(region):
     c2.metric("Min Temp", f"{df['Temperature (°C)'].min():.1f} °C")
     c3.metric("Avg Temp", f"{df['Temperature (°C)'].mean():.1f} °C")
 
-    st.markdown("### Next 24 Hours Forecast")
+    st.markdown("### 📈 Next 24 Hours Forecast")
     st.line_chart(df.set_index("Hour"))
 
-    with st.expander("View Data"):
+    with st.expander("📊 View Data Table"):
         st.dataframe(df)
 
 
-# -----------------------------
-# Tabs content
-# -----------------------------
+# -----------------------------------
+# Tabs
+# -----------------------------------
+tab1, tab2 = st.tabs(["Technopark", "Thampanoor"])
+
 with tab1:
-    st.subheader("Technopark Forecast")
-    display("technopark")
+    display("technopark", "Technopark - Next 24 Hour Forecast")
 
 with tab2:
-    st.subheader("Thampanoor Forecast")
-    display("thampanoor")
+    display("thampanoor", "Thampanoor - Next 24 Hour Forecast")
+
+# -----------------------------------
+# Footer
+# -----------------------------------
+st.markdown("---")
+st.caption("MLOps Pipeline powered weather forecasting | Random Forest Model")
